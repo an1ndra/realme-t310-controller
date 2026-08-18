@@ -129,7 +129,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: appimage-packages
-          path: *.AppImage
+          path: '*.AppImage'
           retention-days: 30
 
   release:
@@ -148,8 +148,8 @@ jobs:
           tag_name: 0.0.1-rc
           prerelease: true
           files: |
-            artifacts/rpm-packages/*.rpm
-            artifacts/deb-packages/*.deb
-            artifacts/appimage-packages/*.AppImage
+            'artifacts/rpm-packages/*.rpm'
+            'artifacts/deb-packages/*.deb'
+            'artifacts/appimage-packages/*.AppImage'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
