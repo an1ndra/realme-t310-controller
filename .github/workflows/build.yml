@@ -53,7 +53,7 @@ jobs:
           mkdir -p debian
           cat > debian/changelog << EOF
           realme-t310-controller (0.0.1-rc) unstable; urgency=low
-          
+
             * Initial release
             
            -- an1ndra <anindrakarmakar+git@proton.me>  $(date -R)
@@ -65,7 +65,7 @@ jobs:
           Maintainer: an1ndra <anindrakarmakar+git@proton.me>
           Build-Depends: debhelper (>= 13), python3-all, python3-pyqt6, python3-dbus
           Standards-Version: 4.6.0
-          
+
           Package: realme-t310-controller
           Architecture: any
           Depends: \${misc:Depends}, \${python3:Depends}
@@ -76,7 +76,7 @@ jobs:
           #!/usr/bin/make -f
           %:
               dh $@
-          
+
           override_dh_auto_install:
               install -D -m 755 qt_app/realme_t310_controller.py $(CURDIR)/debian/realme-t310-controller/usr/bin/realme-t310-controller
               install -D -m 644 realme-t310-controller.desktop $(CURDIR)/debian/realme-t310-controller/usr/share/applications/realme-t310-controller.desktop
@@ -106,31 +106,31 @@ jobs:
         run: |
           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
-          
+
           mkdir -p realme-t310-controller.AppDir/usr/bin
           mkdir -p realme-t310-controller.AppDir/usr/share/applications
           cp qt_app/realme_t310_controller.py realme-t310-controller.AppDir/usr/bin/
           cp realme-t310-controller.desktop realme-t310-controller.AppDir/usr/share/applications/
-          
+
           echo '#!/usr/bin/python3' | cat - realme-t310-controller.AppDir/usr/bin/realme_t310_controller.py > tmp && mv tmp realme-t310-controller.AppDir/usr/bin/realme-t310-controller
           chmod +x realme-t310-controller.AppDir/usr/bin/realme-t310-controller
-          
+
           cat > realme-t310-controller.AppDir/AppRun << 'EOF'
           #!/bin/bash
           cd "$(dirname "$0")/usr/bin"
           exec python3 realme_t310_controller.py "$@"
           EOF
           chmod +x realme-t310-controller.AppDir/AppRun
-          
+
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           chmod +x linuxdeploy-x86_64.AppImage
-          ./linuxdeploy-x86_64.AppImage --appdir realme-t310-controller.AppDir --executable usr/bin/realme-t310-controller --desktop-file usr/share/applications/realme-t310-controller.desktop --output appimage
+          ./linuxdeploy-x86_64.AppImage --appdir realme-t310-controller.AppDir --executable realme-t310-controller.AppDir/usr/bin/realme-t310-controller --desktop-file usr/share/applications/realme-t310-controller.desktop --output appimage
 
       - name: Upload AppImage artifacts
         uses: actions/upload-artifact@v4
         with:
           name: appimage-packages
-          path: '*.AppImage'
+          path: "*.AppImage"
           retention-days: 30
 
   release:
