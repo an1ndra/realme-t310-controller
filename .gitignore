@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+build/
+*.log
+*.pcap
+*.zip
+*.heapsnapshot
+.DS_Store
+*.swp
+*.swo
+*~

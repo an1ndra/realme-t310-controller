@@ -1,0 +1,145 @@
+name: Build Packages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: rpm
+            distro: fedora-latest
+            package_type: rpm
+          - name: deb
+            distro: ubuntu-latest
+            package_type: deb
+          - name: appimage
+            distro: ubuntu-latest
+            package_type: appimage
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION="0.0.1-rc"
+          echo "version=$VERSION" >> $GITHUB_ENV
+          echo "tag=$VERSION" >> $GITHUB_ENV
+
+      - name: Build RPM
+        if: matrix.package_type == 'rpm'
+        run: |
+          sudo dnf install -y rpm-build python3-devel PyQt6 python3-dbus
+          rpmbuild -ba \
+            --define "_topdir ${{ github.workspace }}/build" \
+            --define "version ${{ env.version }}" \
+            build/SPECS/realme-t310-controller.spec
+
+      - name: Build DEB
+        if: matrix.package_type == 'deb'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dh-make debhelper python3-pyqt6 python3-dbus
+          cat > debian/changelog << EOF
+          realme-t310-controller (0.0.1-rc) unstable; urgency=low
+          
+            * Initial release
+            
+           -- an1ndra <anindrakarmakar+git@proton.me>  $(date -R)
+          EOF
+          cat > debian/control << EOF
+          Source: realme-t310-controller
+          Section: utils
+          Priority: optional
+          Maintainer: an1ndra <anindrakarmakar+git@proton.me>
+          Build-Depends: debhelper (>= 13), python3-all, python3-pyqt6, python3-dbus
+          Standards-Version: 4.6.0
+          
+          Package: realme-t310-controller
+          Architecture: any
+          Depends: \${misc:Depends}, \${python3:Depends}
+          Description: Qt6 desktop controller for realme Buds T310
+           A desktop application to control realme Buds T310 earbuds.
+          EOF
+          cat > debian/rules << 'EOF'
+          #!/usr/bin/make -f
+          %:
+              dh $@
+          
+          override_dh_auto_install:
+              install -D -m 755 qt_app/realme_t310_controller.py $(CURDIR)/debian/realme-t310-controller/usr/bin/realme-t310-controller
+              install -D -m 644 build/SPECS/realme-t310-controller.desktop $(CURDIR)/debian/realme-t310-controller/usr/share/applications/realme-t310-controller.desktop
+          EOF
+          chmod +x debian/rules
+          debuild -us -uc -b
+
+      - name: Build AppImage
+        if: matrix.package_type == 'appimage'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pyqt6 python3-dbus desktop-file-utils
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          
+          mkdir -p realme-t310-controller.AppDir/usr/bin
+          mkdir -p realme-t310-controller.AppDir/usr/share/applications
+          cp qt_app/realme_t310_controller.py realme-t310-controller.AppDir/usr/bin/
+          cp build/SPECS/realme-t310-controller.desktop realme-t310-controller.AppDir/usr/share/applications/
+          sed -i 's|Exec=/usr/bin/realme-t310-controller|Exec=/usr/bin/realme-t310-controller|' realme-t310-controller.AppDir/usr/share/applications/realme-t310-controller.desktop
+          echo '#!/usr/bin/python3' | cat - realme-t310-controller.AppDir/usr/bin/realme_t310_controller.py > tmp && mv tmp realme-t310-controller.AppDir/usr/bin/realme-t310-controller
+          chmod +x realme-t310-controller.AppDir/usr/bin/realme-t310-controller
+          
+          cat > realme-t310-controller.AppDir/AppRun << 'EOF'
+          #!/bin/bash
+          cd "$(dirname "$0")/usr/bin"
+          exec python3 realme_t310_controller.py "$@"
+          EOF
+          chmod +x realme-t310-controller.AppDir/AppRun
+          
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
+          ./linuxdeploy-x86_64.AppImage --appdir realme-t310-controller.AppImage --executable ./usr/bin/realme-t310-controller --desktop-file ./usr/share/applications/realme-t310-controller.desktop --output appimage
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.package_type }}
+          path: |
+            build/RPMS/*/*.rpm
+            build/SRPMS/*.src.rpm
+            debuild/*.deb
+            *.AppImage
+          retention-days: 30
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: 0.0.1-rc
+          prerelease: true
+          files: |
+            *.rpm
+            *.deb
+            *.AppImage
+            *.src.rpm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
