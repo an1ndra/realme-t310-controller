@@ -2,7 +2,7 @@
 Name=realme Buds T310
 Comment=Controller for realme Buds T310 earbuds
 Exec=/usr/bin/realme-t310-controller
-Icon=audio-headset
+Icon=realme-t310-controller
 Type=Application
-Categories=Audio;Video;
+Categories=AudioVideo;Audio;
 Terminal=false
