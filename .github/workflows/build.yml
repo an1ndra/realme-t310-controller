@@ -91,12 +91,13 @@ jobs:
           EOF
           chmod +x debian/rules
           debuild -us -uc -b
+          mv -v ../*.deb .
 
       - name: Upload DEB artifacts
         uses: actions/upload-artifact@v4
         with:
           name: deb-packages
-          path: ../*.deb
+          path: "*.deb"
           retention-days: 30
 
   build-appimage:
